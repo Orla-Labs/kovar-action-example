@@ -23,7 +23,7 @@ jobs:
 
       - name: Kovar on a secure page (should pass)
         id: secure
-        uses: Orla-Labs/kovar/.github/actions/security-check@v0.7.0-rc.1
+        uses: Orla-Labs/kovar/.github/actions/security-check@v0.7.0-rc.2
         with:
           url: http://localhost:4789/secure
           checks: headers
@@ -32,7 +32,7 @@ jobs:
       - name: Kovar on an insecure page (should fail)
         id: insecure
         continue-on-error: true
-        uses: Orla-Labs/kovar/.github/actions/security-check@v0.7.0-rc.1
+        uses: Orla-Labs/kovar/.github/actions/security-check@v0.7.0-rc.2
         with:
           url: http://localhost:4789/insecure
           checks: headers
