@@ -1,0 +1,55 @@
+name: Kovar action smoke
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+  security-events: write
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - name: Start fixture server
+        run: |
+          node server.js &
+          for i in $(seq 1 20); do curl -fsS http://localhost:4789/secure >/dev/null && break; sleep 0.5; done
+
+      - name: Kovar on a secure page (should pass)
+        id: secure
+        uses: Orla-Labs/kovar/.github/actions/security-check@v0.7.0-rc.1
+        with:
+          url: http://localhost:4789/secure
+          checks: headers
+          output-dir: results-secure
+
+      - name: Kovar on an insecure page (should fail)
+        id: insecure
+        continue-on-error: true
+        uses: Orla-Labs/kovar/.github/actions/security-check@v0.7.0-rc.1
+        with:
+          url: http://localhost:4789/insecure
+          checks: headers
+          output-dir: results-insecure
+
+      - name: Assert outcomes and outputs
+        run: |
+          set -x
+          test "${{ steps.secure.outcome }}" = "success"
+          test "${{ steps.secure.outputs.passed }}" = "true"
+          test "${{ steps.insecure.outcome }}" = "failure"
+          test -s "${{ steps.insecure.outputs.json-path }}"
+          test -s "${{ steps.insecure.outputs.sarif-path }}"
+
+      - name: Upload SARIF to code scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: ${{ steps.insecure.outputs.sarif-path }}
+          category: kovar-headers
